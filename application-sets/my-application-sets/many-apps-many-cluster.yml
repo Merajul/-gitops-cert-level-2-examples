@@ -1,33 +1,36 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: cluster-git
+  name: billing-application-set
+  namespace: argocd
 spec:
   generators:
-    # matrix 'parent' generator
-    - matrix:
-        generators:
-          # git generator, 'child' #1
-          - git:
-              repoURL: https://github.com/Merajul/gitops-cert-level-2-examples.git
-              revision: HEAD
-              directories:
-                - path: application-sets/example-apps/*
-          # cluster generator, 'child' #2
-          - clusters: {}
-  template:
+  - list:
+      elements:
+      - namespace: prod
+        path: prod
+      - namespace: staging
+      - namespace: qa
+ 
+  template:      
     metadata:
-      name: '{{path.basename}}-{{name}}'
+      name: 'demo-{{namespace}}'
     spec:
-      project: 'default'
+      # The project the application belongs to.
+      project: default
+
+      # Source of the application manifests
       source:
         repoURL: https://github.com/Merajul/gitops-cert-level-2-examples.git
         targetRevision: HEAD
-        path: '{{path}}'
+        path: ./environment-promotion/envs/{{namespace}}
+      
+      # Destination cluster and namespace to deploy the application
       destination:
-        server: '{{server}}'
-        namespace: '{{path.basename}}'
-              # Sync policy
+        server: https://kubernetes.default.svc
+        namespace: '{{namespace}}'
+
+      # Sync policy
       syncPolicy:
         syncOptions:
           - CreateNamespace=true  
